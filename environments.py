@@ -72,7 +72,7 @@ class PyProcessDmLab(object):
     self._random_state = np.random.RandomState(seed=seed)
     if runfiles_path:
       deepmind_lab.set_runfiles_path(runfiles_path)
-    config = {k: str(v) for k, v in config.iteritems()}
+    config = {k: str(v) for k, v in config.items()}
     self._observation_spec = ['RGB_INTERLEAVED', 'INSTR']
     self._env = deepmind_lab.Lab(
         level=level,
