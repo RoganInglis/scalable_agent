@@ -54,12 +54,10 @@ flags.DEFINE_integer('test_num_episodes', 10, 'Number of episodes per level.')
 
 # Flags used for distributed training.
 flags.DEFINE_integer('task', -1, 'Task id. Use -1 for local training.')
-flags.DEFINE_enum('job_name', 'learner', ['learner', 'actor'],
-                  'Job name. Ignored when task is set to -1.')
+flags.DEFINE_enum('job_name', 'learner', ['learner', 'actor'], 'Job name. Ignored when task is set to -1.')
 
 # Training.
-flags.DEFINE_integer('total_environment_frames', int(1e9),
-                     'Total environment frames to train for.')
+flags.DEFINE_integer('total_environment_frames', int(1e9), 'Total environment frames to train for.')
 flags.DEFINE_integer('num_actors', 4, 'Number of actors.')
 flags.DEFINE_integer('batch_size', 2, 'Batch size for training.')
 flags.DEFINE_integer('unroll_length', 100, 'Unroll length in agent steps.')
@@ -70,8 +68,7 @@ flags.DEFINE_integer('seed', 1, 'Random seed.')
 flags.DEFINE_float('entropy_cost', 0.00025, 'Entropy cost/multiplier.')
 flags.DEFINE_float('baseline_cost', .5, 'Baseline cost/multiplier.')
 flags.DEFINE_float('discounting', .99, 'Discounting factor.')
-flags.DEFINE_enum('reward_clipping', 'abs_one', ['abs_one', 'soft_asymmetric'],
-                  'Reward clipping.')
+flags.DEFINE_enum('reward_clipping', 'abs_one', ['abs_one', 'soft_asymmetric'], 'Reward clipping.')
 
 # Environment settings.
 flags.DEFINE_string(
@@ -91,10 +88,8 @@ flags.DEFINE_float('momentum', 0., 'RMSProp momentum.')
 flags.DEFINE_float('epsilon', .1, 'RMSProp epsilon.')
 
 # Structure to be sent from actors to learner.
-ActorOutput = collections.namedtuple(
-    'ActorOutput', 'level_name agent_state env_outputs agent_outputs')
-AgentOutput = collections.namedtuple('AgentOutput',
-                                     'action policy_logits baseline')
+ActorOutput = collections.namedtuple('ActorOutput', 'level_name agent_state env_outputs agent_outputs')
+AgentOutput = collections.namedtuple('AgentOutput', 'action policy_logits baseline')
 
 
 def is_single_machine():
@@ -107,12 +102,10 @@ def build_actor(agent, env, level_name, action_set):
     initial_env_output, initial_env_state = env.initial()
     initial_agent_state = agent.initial_state(1)
     initial_action = tf.zeros([1], dtype=tf.int32)
-    dummy_agent_output, _ = agent(
-        (initial_action,
-         nest.map_structure(lambda t: tf.expand_dims(t, 0), initial_env_output)),
-        initial_agent_state)
-    initial_agent_output = nest.map_structure(
-        lambda t: tf.zeros(t.shape, t.dtype), dummy_agent_output)
+    dummy_agent_output, _ = agent((initial_action,
+                                   nest.map_structure(lambda t: tf.expand_dims(t, 0), initial_env_output)),
+                                  initial_agent_state)
+    initial_agent_output = nest.map_structure(lambda t: tf.zeros(t.shape, t.dtype), dummy_agent_output)
 
     # All state that needs to persist across training iterations. This includes
     # the last environment output, agent state and last agent output. These
@@ -261,20 +254,16 @@ def build_learner(agent, agent_state, env_outputs, agent_outputs):
 
     # Compute loss as a weighted sum of the baseline loss, the policy gradient
     # loss and an entropy regularization term.
-    total_loss = compute_policy_gradient_loss(
-        learner_outputs.policy_logits, agent_outputs.action,
-        vtrace_returns.pg_advantages)
-    total_loss += FLAGS.baseline_cost * compute_baseline_loss(
-        vtrace_returns.vs - learner_outputs.baseline)
-    total_loss += FLAGS.entropy_cost * compute_entropy_loss(
-        learner_outputs.policy_logits)
+    total_loss = compute_policy_gradient_loss(learner_outputs.policy_logits,
+                                              agent_outputs.action,
+                                              vtrace_returns.pg_advantages)
+    total_loss += FLAGS.baseline_cost * compute_baseline_loss(vtrace_returns.vs - learner_outputs.baseline)
+    total_loss += FLAGS.entropy_cost * compute_entropy_loss(learner_outputs.policy_logits)
 
     # Optimization
     num_env_frames = tf.train.get_global_step()
-    learning_rate = tf.train.polynomial_decay(FLAGS.learning_rate, num_env_frames,
-                                              FLAGS.total_environment_frames, 0)
-    optimizer = tf.train.RMSPropOptimizer(learning_rate, FLAGS.decay,
-                                          FLAGS.momentum, FLAGS.epsilon)
+    learning_rate = tf.train.polynomial_decay(FLAGS.learning_rate, num_env_frames, FLAGS.total_environment_frames, 0)
+    optimizer = tf.train.RMSPropOptimizer(learning_rate, FLAGS.decay, FLAGS.momentum, FLAGS.epsilon)
     train_op = optimizer.minimize(total_loss)
 
     # Merge updating the network and environment frames into a single tensor.
@@ -309,8 +298,7 @@ def create_environment(level_name, seed, is_test=False):
         # Mixer seed for evalution, see
         # https://github.com/deepmind/lab/blob/master/docs/users/python_api.md
         config['mixerSeed'] = 0x600D5EED
-    p = py_process.PyProcess(environments.PyProcessDmLab, level_name, config,
-                             FLAGS.num_action_repeats, seed)
+    p = py_process.PyProcess(environments.PyProcessDmLab, level_name, config, FLAGS.num_action_repeats, seed)
     return environments.FlowEnvironment(p.proxy)
 
 
@@ -486,8 +474,7 @@ def train(action_set, level_names):
                             infos_v.episode_step[done_v]):
                         episode_frames = episode_step * FLAGS.num_action_repeats
 
-                        tf.logging.info('Level: %s Episode return: %f',
-                                        level_name, episode_return)
+                        tf.logging.info('Level: %s Episode return: %f', level_name, episode_return)
 
                         summary = tf.summary.Summary()
                         summary.value.add(tag=level_name + '/episode_return',
@@ -499,17 +486,12 @@ def train(action_set, level_names):
                         if FLAGS.level_name == 'dmlab30':
                             level_returns[level_name].append(episode_return)
 
-                    if (FLAGS.level_name == 'dmlab30' and
-                            min(map(len, level_returns.values())) >= 1):
-                        no_cap = dmlab30.compute_human_normalized_score(level_returns,
-                                                                        per_level_cap=None)
-                        cap_100 = dmlab30.compute_human_normalized_score(level_returns,
-                                                                         per_level_cap=100)
+                    if FLAGS.level_name == 'dmlab30' and min(map(len, level_returns.values())) >= 1:
+                        no_cap = dmlab30.compute_human_normalized_score(level_returns, per_level_cap=None)
+                        cap_100 = dmlab30.compute_human_normalized_score(level_returns, per_level_cap=100)
                         summary = tf.summary.Summary()
-                        summary.value.add(
-                            tag='dmlab30/training_no_cap', simple_value=no_cap)
-                        summary.value.add(
-                            tag='dmlab30/training_cap_100', simple_value=cap_100)
+                        summary.value.add(tag='dmlab30/training_no_cap', simple_value=no_cap)
+                        summary.value.add(tag='dmlab30/training_cap_100', simple_value=cap_100)
                         summary_writer.add_summary(summary, num_env_frames_v)
 
                         # Clear level scores.
@@ -550,10 +532,8 @@ def test(action_set, level_names):
                         break
 
     if FLAGS.level_name == 'dmlab30':
-        no_cap = dmlab30.compute_human_normalized_score(level_returns,
-                                                        per_level_cap=None)
-        cap_100 = dmlab30.compute_human_normalized_score(level_returns,
-                                                         per_level_cap=100)
+        no_cap = dmlab30.compute_human_normalized_score(level_returns, per_level_cap=None)
+        cap_100 = dmlab30.compute_human_normalized_score(level_returns, per_level_cap=100)
         tf.logging.info('No cap.: %f Cap 100: %f', no_cap, cap_100)
 
 
